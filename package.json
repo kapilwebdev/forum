@@ -13,7 +13,8 @@
     "jsonwebtoken": "*",
     "body-parser": "*",
     "lodash": "*",
-    "mongoose": "*"
+    "mongoose": "*",
+    "validator": "*"
   },
   "author": "",
   "license": "ISC"
