@@ -1,68 +1,67 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const config = require('../config/database');
+const jwt = require('jsonwebtoken');
 
+mongoose.Promise = require('bluebird');
 
-
-const UserSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    username: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true,
-        minlength: 1
-    },
+var UserSchema = new mongoose.Schema({
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        trip: true,
-        minlength:1,
-        validate: {
-            validator: validator.isEmail,
-            message: '{VALUE} is not a valid email'
-          } 
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 1,
+      unique: true,
+      validate: {
+        validator: validator.isEmail,
+        message: '{VALUE} is not a valid email'
+      }
     },
     password: {
-        type: String,
-        required: true,
-        minlength:6
+      type: String,
+      require: true,
+      minlength: 6
     },
     tokens: [{
-        access:{
-            type: String,
-            required: true
-        },
-        token:{
-            type: String,
-            required: true
-        }
+      access: {
+        type: String,
+        required: true
+      },
+      token: {
+        type: String,
+        required: true
+      }
     }]
-});
+  });
 
+UserSchema.methods.generateAuthToken = function(){
+  var user = this;
+  var access = 'auth';
+  var token = jwt.sign({_id: user._id.toHexString(), access}, config.secret).toString();
 
-const User = module.exports = mongoose.model('User', UserSchema);
+  user.tokens.push({access, token});
 
-module.exports.addUser = (newUser, callback) => {
-    bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(newUser.password, salt, (err, hash) => {
-            if(err){
-                return false;
-            }
-            newUser.password = hash;
-            newUser.save(callback);
-        });
-    });
+  return user.save().then(() => {
+      return token;
+  });
 };
 
-module.exports.getUserByCredentials = (username, callback) => {
-   User.findOne({username}, callback);
-}
+UserSchema.pre('save', function(next) {
+    var user = this;
+    if(user.isModified('password')){
+        bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(user.password, salt, (err, hash) => {
+                user.password = hash;
+                console.log(hash);
+                next();
+            });
+        });
+    } else {
+        next();
+    }
+});
 
-module.exports.comparePassword = (password, userPassword, callback) =>{
-    bcrypt.compare(password, userPassword, callback);
-}
+var User =  mongoose.model('User', UserSchema);
+
+module.exports = {User};

@@ -28,7 +28,7 @@ app.use('/user', users_routes);
 
 // Listening port
 
-const port = 4444;
+const port = 3000;
 
 app.listen(port, () => {
     console.log('Server is running at', port);
